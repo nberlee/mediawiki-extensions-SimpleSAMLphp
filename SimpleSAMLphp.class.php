@@ -155,6 +155,8 @@ class SimpleSAMLphp extends PluggableAuth {
 		$saml = self::getSAMLClient();
 		$attributes = $saml->getAttributes();
 
+		$gotGroup = false;
+
 		if ( is_array( $GLOBALS['wgSimpleSAMLphp_GroupMap'] ) ) {
 			# group map: [mediawiki group][saml attribute][saml attribute value]
 			foreach ( $GLOBALS['wgSimpleSAMLphp_GroupMap'] as $group => $rules ) {
@@ -165,6 +167,7 @@ class SimpleSAMLphp extends PluggableAuth {
 					foreach ( $needles as $needle ) {
 						if ( in_array( $needle, $attributes[$attrName] ) ) {
 							$user->addGroup( $group );
+							$gotGroup = true;
 						} else {
 							$user->removeGroup( $group );
 						}
@@ -173,6 +176,12 @@ class SimpleSAMLphp extends PluggableAuth {
 			}
 		} else {
 			wfDebug( 'SimpleSAMLphp: $wgSimpleSAMLphp_GroupMap is not an array' );
+		}
+		if (! $gotGroup && $GLOBALS['wgSimpleSAMLphp_ManditoryGroupMap']) {
+			wfDebug( 'Manditory group mapping was not done, logging off');
+			Hooks::run( 'UserLogout', [ $user ] );
+			header( 'HTTP/1.1 403 Forbidden' );
+			die();
 		}
 	}
 
